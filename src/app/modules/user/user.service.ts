@@ -136,9 +136,25 @@ const updateUser = async (userId: string, payload: Partial<IUser>, decodedToken:
 
 }
 
+const getMe = async (userId: string) => {
+   const user = await User.findById(userId).select("-password")
+   return {
+      data: user
+   }
+}
+
+const getSingleUser = async (id: string) => {
+   const user = await User.findById(id).select("-password")
+   return {
+      data: user
+   }
+}
+
 
 export const UserService = {
     createUser,
     getAllUser,
-    updateUser
+    updateUser,
+    getMe,
+    getSingleUser
 }
