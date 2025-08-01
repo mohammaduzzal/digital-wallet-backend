@@ -16,6 +16,11 @@ router.post("/withdraw", checkAuth(Role.USER),validateRequest(createTransactionZ
 
 router.post("/send", checkAuth(Role.USER),validateRequest(createTransactionZodSchema), TransactionController.sendMoney)
 
+// agent only-add and withdraw money
+router.post("/cash-in", checkAuth(Role.AGENT),validateRequest(createTransactionZodSchema), TransactionController.cashIn)
+
+router.post("/cash-out", checkAuth(Role.AGENT),validateRequest(createTransactionZodSchema), TransactionController.cashOut)
+
 
 
 // get all transaction -admin
