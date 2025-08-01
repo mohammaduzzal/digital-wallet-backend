@@ -3,7 +3,7 @@ import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../user/user.interface";
 import { WalletController } from "./wallet.controller";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { updateWalletSchema } from "./wallet.validtion";
+import { updateWalletSchema } from "./wallet.validation";
 
 const router = Router()
 
