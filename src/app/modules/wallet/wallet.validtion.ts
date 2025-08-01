@@ -1,5 +1,6 @@
 import z from "zod";
 
 export const updateWalletSchema = z.object({
- isBlocked : z.boolean({error : "isBlocked must be true or false"})
+    balance: z.number().positive().optional(),
+    isBlocked: z.boolean({ error: "isBlocked must be true or false" }).optional()
 })
