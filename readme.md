@@ -6,7 +6,7 @@ A robust RESTful API built with **Node.js**, **Express**, **TypeScript**, and **
 
 ## 🌐 Live Links
 
-- **Live Deployment:** [Library Management API]()
+- **Live Deployment:** [Digital Wallet API](https://digital-wallet-api-pink.vercel.app/)
 
 ---
 
@@ -40,8 +40,8 @@ A robust RESTful API built with **Node.js**, **Express**, **TypeScript**, and **
 Clone the repository and install dependencies:
 
 ```bash
-git clone <repo-link>
-cd <project-directory>
+git clone [<repo-link>](https://github.com/mohammaduzzal/digital-wallet-backend.git)
+cd assignment-5-digital-wallet
 npm install
 ```
 

@@ -327,7 +327,7 @@ const cashOut = async (payload: Partial<ITransaction>, decodedToken: JwtPayload)
 
 
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        
         const userWallet = await validateWallet(userWalletId as mongoose.Types.ObjectId, session)
 
 
