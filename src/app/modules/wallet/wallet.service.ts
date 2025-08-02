@@ -1,19 +1,28 @@
 import { JwtPayload } from "jsonwebtoken";
 import { Wallet } from "./wallet.model";
 import { IWallet } from "./wallet.interface";
+import { QueryBuilder } from "../../utils/queryBuilders";
 
-const getAllWallets = async () => {
 
-    const users = await Wallet.find({}).populate("owner", "name email");
+const getAllWallets = async (query : Record<string,string>) => {
+    const queryBuilder = new QueryBuilder(Wallet.find().populate("owner", "name email"),query)
 
-    const totalUser = await Wallet.countDocuments()
 
+    const walletData = queryBuilder
+    .filter()
+    .sort()
+    .fields()
+    .pagination()
+
+    const [data,meta] = await Promise.all([
+        walletData.build(),
+        queryBuilder.getMeta()
+    ])
 
     return {
-        data: users,
-        meta: {
-            total: totalUser
-        }
+        data,
+        meta
+        
     }
 }
 

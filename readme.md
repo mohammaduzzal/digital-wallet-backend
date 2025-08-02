@@ -275,6 +275,54 @@ This API provides endpoints for managing users, wallets, and transactions in a d
   "description": "Sent to a friend"
 }
 ```
+
+
+#### ➕ CASH_IN
+
+**Method:** POST
+
+**URL:** `/api/v1/transaction/cash-in`
+
+**Roles:** AGENT
+
+**Description:** Agent adds money to a user's wallet.
+
+**Request Body:**
+```JSON
+
+{
+     "types": "CASH_IN",
+     "amount" : 500,
+     "senderWallet" : "688c59e346b9014a38cfe116",
+     "receiverWallet" :"688a48f0a806d9b624625b1s8",
+     "initiateBy" : "688c59e246b9014a38cfea54a"
+}
+```
+
+#### ➕ CASH_OUT
+
+**Method:** POST
+
+**URL:** `/api/v1/transaction/cash-out`
+
+**Roles:** AGENT
+
+**Description:** Agent withdraws money from a user's 
+wallet.
+
+**Request Body:**
+```JSON
+
+{
+            "types": "CASH_OUT",
+            "amount" : 50,
+            "fee" : 5,
+            "senderWallet" : "688a48f0a806d9b624625b18",
+            "receiverWallet" :"688c59e346b9014a38cfea56",
+            "initiateBy" : "688a48f0a806d9b624625b16"
+}
+```
+
 #### 📜 Get All Transactions
 
 **Method:** GET
@@ -292,6 +340,23 @@ This API provides endpoints for managing users, wallets, and transactions in a d
 **Roles:** USER, AGENT
 
 **Description:** Retrieves all transactions related to the authenticated user's wallet.
+
+
+#### 🔍 Advanced Query Builder
+To provide flexible and reusable querying , the project uses a custom QueryBuilder utility. This class simplifies and standardizes complex query operations across multiple routes.
+
+Features
+- ✅ **Filtering:** Exclude fields like page, limit, etc., and apply dynamic filters.
+
+- 🔎 **Search:** Perform keyword search across multiple fields.
+
+- ↕️ **Sorting:** Sort results by any field (default: createdAt descending).
+
+- 📝 **Field Selection:** Return only selected fields using the fields query param.
+
+- 📄 **Pagination:** Efficiently paginate results with page and limit parameters.
+
+- 📊 **Metadata:** Returns total count and total pages for admin dashboards.
 
 
 

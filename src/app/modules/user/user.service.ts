@@ -8,6 +8,8 @@ import { Wallet } from '../wallet/wallet.model';
 import mongoose from 'mongoose';
 import { IWallet } from '../wallet/wallet.interface';
 import { JwtPayload } from 'jsonwebtoken';
+import { QueryBuilder } from '../../utils/queryBuilders';
+import { userSearchableFields } from './user.contants';
 
 const createUser = async (payload: Partial<IUser>) => {
 
@@ -90,18 +92,26 @@ const createUser = async (payload: Partial<IUser>) => {
 }
 
 
-const getAllUser = async () => {
+const getAllUser = async (query : Record<string,string>) => {
+    const queryBuilder = new QueryBuilder(User.find(),query)
+    
+    const userData = queryBuilder
+    .filter()
+    .search(userSearchableFields)
+    .sort()
+    .fields()
+    .pagination()
 
-    const users = await User.find({});
-
-    const totalUser = await User.countDocuments()
+    const [data,meta] = await Promise.all([
+        userData.build(),
+        queryBuilder.getMeta()
+    ])
 
 
     return {
-        data: users,
-        meta: {
-            total: totalUser
-        }
+        data,
+        meta
+       
     }
 }
 

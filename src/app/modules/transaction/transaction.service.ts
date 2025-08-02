@@ -1,85 +1,70 @@
-import  httpStatus  from 'http-status-codes';
+import httpStatus from 'http-status-codes';
 import { JwtPayload } from "jsonwebtoken"
 import { IStatus, ITransaction, IType } from "./transaction.interface"
 import mongoose from "mongoose"
 import { User } from "../user/user.model";
 import AppError from "../../errorHelpers/AppError";
-import { IUser } from '../user/user.interface';
-import { IWallet } from '../wallet/wallet.interface';
 import { Wallet } from '../wallet/wallet.model';
 import { Transaction } from './transaction.model';
+import { validateAmount, validateUserWithWallet, validateWallet } from '../../utils/checkTransactionEligibility';
+import { QueryBuilder } from '../../utils/queryBuilders';
+import { transactionSearchableField } from './transaction.contants';
 
 
-type PopulateUser = Omit<IUser, "wallet"> &{
-    wallet : IWallet
-}
 
-const deposit = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)=>{
+const deposit = async (payload: Partial<ITransaction>, decodedToken: JwtPayload) => {
 
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const user = await User.findById(decodedToken.userId).populate<PopulateUser>("wallet").session(session)
-
-        if(!user || !user.wallet){
-            throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
-        }
-
-           if(user.wallet.isBlocked){
-            throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
-        }
-
-
-        if(!user.isApproved){
-            throw new AppError(httpStatus.FORBIDDEN, "your account is not approved")
-        }
-
+        validateAmount(payload.amount as number)
+        const user = await validateUserWithWallet(decodedToken.userId, session)
 
         const walletId = user.wallet._id
         const amount = payload.amount
 
         const updateWallet = await Wallet.findByIdAndUpdate(
             walletId,
-            {$inc : {balance : amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: amount } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateWallet){
+        if (!updateWallet) {
             throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
         }
 
         const newTransaction = new Transaction({
-            types : IType.DEPOSIT,
-            amount : amount,
-            receiverWallet : walletId,
-            initiateBy : decodedToken.userId,
-            status : IStatus.COMPLETED,
+            types: IType.DEPOSIT,
+            amount: amount,
+            receiverWallet: walletId,
+            initiateBy: decodedToken.userId,
+            status: IStatus.COMPLETED,
             description: payload.description || `deposit of BDT ${amount} to wallet.`
         })
 
-        const savedTransaction = await newTransaction.save({session})
+        const savedTransaction = await newTransaction.save({ session })
 
         await session.commitTransaction()
         session.endSession()
 
         return savedTransaction
 
-     
-        
+
+
     } catch (error) {
         await session.abortTransaction()
         session.endSession()
-       throw error
-        
+        throw error
+
     }
 
 
-    
+
 }
 
 
-const withdraw = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)=>{
+const withdraw = async (payload: Partial<ITransaction>, decodedToken: JwtPayload) => {
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -87,76 +72,61 @@ const withdraw = async(payload : Partial<ITransaction>, decodedToken : JwtPayloa
     try {
         const amount = payload.amount
 
-        if(!amount || amount <= 0){
-              throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
+        if (!amount || amount <= 0) {
+            throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
         }
 
-
-        const user = await User.findById(decodedToken.userId).populate<PopulateUser>("wallet").session(session)
-
-        if(!user || !user.wallet){
-            throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
-        }
-
-           if(user.wallet.isBlocked){
-            throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
-        }
-
-
-        if(!user.isApproved){
-            throw new AppError(httpStatus.FORBIDDEN, "your account is not approved")
-        }
-
+        const user = await validateUserWithWallet(decodedToken.userId, session)
 
         const walletId = user.wallet._id
-        
 
-        if(amount > user.wallet.balance){
+
+        if (amount > user.wallet.balance) {
             throw new AppError(httpStatus.BAD_REQUEST, "insufficient balance")
         }
 
         const updateWallet = await Wallet.findByIdAndUpdate(
             walletId,
-            {$inc : {balance : -amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: -amount } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateWallet){
+        if (!updateWallet) {
             throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
         }
 
         const newTransaction = new Transaction({
-            types : IType.WITHDRAW,
-            amount : amount,
-            senderWallet : walletId,
-            initiateBy : decodedToken.userId,
-            status : IStatus.COMPLETED,
+            types: IType.WITHDRAW,
+            amount: amount,
+            senderWallet: walletId,
+            initiateBy: decodedToken.userId,
+            status: IStatus.COMPLETED,
             description: payload.description || `withdraw of BDT ${amount} from your wallet.`
         })
 
-        const savedTransaction = await newTransaction.save({session})
+        const savedTransaction = await newTransaction.save({ session })
 
         await session.commitTransaction()
         session.endSession()
 
         return savedTransaction
 
-     
-        
+
+
     } catch (error) {
         await session.abortTransaction()
         session.endSession()
-       throw error
-        
+        throw error
+
     }
 
 
-    
+
 }
 
 
 
-const sendMoney = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)=>{
+const sendMoney = async (payload: Partial<ITransaction>, decodedToken: JwtPayload) => {
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -164,66 +134,50 @@ const sendMoney = async(payload : Partial<ITransaction>, decodedToken : JwtPaylo
     try {
         const amount = payload.amount
         const receiverWalletId = payload.receiverWallet
-       
 
 
-        if(!amount || amount <= 0){
-              throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
+
+        if (!amount || amount <= 0) {
+            throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
         }
 
-
-        const user = await User.findById(decodedToken.userId).populate<PopulateUser>("wallet").session(session)
-
-        if(!user || !user.wallet){
-            throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
-        }
-
-           if(user.wallet.isBlocked){
-            throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
-        }
+        const user = await validateUserWithWallet(decodedToken.userId, session)
 
 
-        if(!user.isApproved){
-            throw new AppError(httpStatus.FORBIDDEN, "your account is not approved")
-        }
 
 
         const senderWalletId = user.wallet._id
-        
 
-        if(amount > user.wallet.balance){
+
+        if (amount > user.wallet.balance) {
             throw new AppError(httpStatus.BAD_REQUEST, "insufficient balance")
         }
 
-        const receiverWallet = await Wallet.findById(receiverWalletId).session(session)
-      
-
-        if(!receiverWallet){
-            throw new AppError(httpStatus.NOT_FOUND, "receiver's wallet not found")
-        }
-        if(receiverWallet.isBlocked){
-            throw new AppError(httpStatus.BAD_REQUEST, "Receiver's wallet is currently blocked and cannot receive money.")
-        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const receiverWallet = await validateWallet(receiverWalletId as mongoose.Types.ObjectId, session)
 
 
 
-        const updateSenderWallet = await Wallet.findByIdAndUpdate(
+        const updateSenderWalletPromise = Wallet.findByIdAndUpdate(
             senderWalletId,
-            {$inc : {balance : -amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: -amount } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateSenderWallet){
-            throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
-        }
 
-        const updateReceiverWallet = await Wallet.findByIdAndUpdate(
+
+        const updateReceiverWalletPromise = Wallet.findByIdAndUpdate(
             receiverWalletId,
-            {$inc : {balance : amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: amount } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateReceiverWallet){
+        const [updateSenderWallet, updateReceiverWallet] = await Promise.all([
+            updateSenderWalletPromise,
+            updateReceiverWalletPromise
+        ])
+
+        if (!updateSenderWallet || !updateReceiverWallet) {
             throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
         }
 
@@ -231,37 +185,37 @@ const sendMoney = async(payload : Partial<ITransaction>, decodedToken : JwtPaylo
 
 
         const newTransaction = new Transaction({
-            types : IType.SEND,
-            amount : amount,
-            senderWallet : senderWalletId,
-            receiverWallet : receiverWalletId,
-            initiateBy : decodedToken.userId,
-            status : IStatus.COMPLETED,
+            types: IType.SEND,
+            amount: amount,
+            senderWallet: senderWalletId,
+            receiverWallet: receiverWalletId,
+            initiateBy: decodedToken.userId,
+            status: IStatus.COMPLETED,
             description: payload.description || `sent money of BDT ${amount} from your wallet to ${receiverWalletId} account.`
         })
 
-        const savedTransaction = await newTransaction.save({session})
+        const savedTransaction = await newTransaction.save({ session })
 
         await session.commitTransaction()
         session.endSession()
 
         return savedTransaction
 
-     
-        
+
+
     } catch (error) {
         await session.abortTransaction()
         session.endSession()
-       throw error
-        
+        throw error
+
     }
 
 
-    
+
 }
 
 
-const cashIn = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)=>{
+const cashIn = async (payload: Partial<ITransaction>, decodedToken: JwtPayload) => {
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -269,66 +223,51 @@ const cashIn = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)
     try {
         const amount = payload.amount
         const receiverWalletId = payload.receiverWallet
-       
 
 
-        if(!amount || amount <= 0){
-              throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
+
+        if (!amount || amount <= 0) {
+            throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
         }
 
 
-        const agent = await User.findById(decodedToken.userId).populate<PopulateUser>("wallet").session(session)
-
-        if(!agent || !agent.wallet){
-            throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
-        }
-
-           if(agent.wallet.isBlocked){
-            throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
-        }
+        const agent = await validateUserWithWallet(decodedToken.userId, session)
 
 
-        if(!agent.isApproved){
-            throw new AppError(httpStatus.FORBIDDEN, "your account is not approved")
-        }
-        
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const receiverWallet = await validateWallet(receiverWalletId as mongoose.Types.ObjectId, session)
 
-       
 
-        const receiverWallet = await Wallet.findById(receiverWalletId).session(session)
-      
-
-        if(!receiverWallet){
-            throw new AppError(httpStatus.NOT_FOUND, "receiver's wallet not found")
-        }
-        if(receiverWallet.isBlocked){
-            throw new AppError(httpStatus.BAD_REQUEST, "Receiver's wallet is currently blocked and cannot receive money.")
-        }
 
         const commissionRate = agent.commissionRate || 0
-        const commissionAmount = amount * commissionRate
+        const commissionAmount = (amount * commissionRate) / 100
         const amountToDebitFromAgent = amount - commissionAmount
 
-         if(amountToDebitFromAgent > agent.wallet.balance){
+        if (amountToDebitFromAgent > agent.wallet.balance) {
             throw new AppError(httpStatus.BAD_REQUEST, "insufficient balance")
         }
 
 
 
-        const updateSenderWallet = await Wallet.findByIdAndUpdate(
+        const senderPromise = Wallet.findByIdAndUpdate(
             agent.wallet._id,
-            {$inc : {balance : -amountToDebitFromAgent}},
-            {new:true, runValidators : true}
+            { $inc: { balance: -amountToDebitFromAgent } },
+            { new: true, runValidators: true, session }
         )
 
 
-        const updateReceiverWallet = await Wallet.findByIdAndUpdate(
+        const receiverPromise = Wallet.findByIdAndUpdate(
             receiverWalletId,
-            {$inc : {balance : amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: amount } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateSenderWallet || !updateReceiverWallet){
+        const [updateSenderWallet, updateReceiverWallet] = await Promise.all([
+            senderPromise,
+            receiverPromise
+        ])
+
+        if (!updateSenderWallet || !updateReceiverWallet) {
             throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
         }
 
@@ -336,40 +275,40 @@ const cashIn = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)
 
 
         const newTransaction = new Transaction({
-            types : IType.CASH_IN,
-            amount : amount,
-            fee : 0,
-            commission : commissionAmount,
-            senderWallet : agent.wallet._id,
-            receiverWallet : receiverWalletId,
-            initiateBy : decodedToken.userId,
-            status : IStatus.COMPLETED,
+            types: IType.CASH_IN,
+            amount: amount,
+            fee: 0,
+            commission: commissionAmount,
+            senderWallet: agent.wallet._id,
+            receiverWallet: receiverWalletId,
+            initiateBy: decodedToken.userId,
+            status: IStatus.COMPLETED,
             description: payload.description || `Cash-In of BDT ${amount} to user account. Commission: BDT ${commissionAmount}.`
         })
 
-        const savedTransaction = await newTransaction.save({session})
+        const savedTransaction = await newTransaction.save({ session })
 
         await session.commitTransaction()
         session.endSession()
 
         return savedTransaction
 
-     
-        
+
+
     } catch (error) {
         await session.abortTransaction()
         session.endSession()
-       throw error
-        
+        throw error
+
     }
 
 
-    
+
 }
 
 
 
-const cashOut = async(payload : Partial<ITransaction>, decodedToken : JwtPayload)=>{
+const cashOut = async (payload: Partial<ITransaction>, decodedToken: JwtPayload) => {
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -377,66 +316,51 @@ const cashOut = async(payload : Partial<ITransaction>, decodedToken : JwtPayload
     try {
         const amount = payload.amount
         const userWalletId = payload.senderWallet
-       
 
 
-        if(!amount || amount <= 0){
-              throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
+
+        if (!amount || amount <= 0) {
+            throw new AppError(httpStatus.BAD_REQUEST, "A valid positive amount is required.");
         }
 
-
-        const agent = await User.findById(decodedToken.userId).populate<PopulateUser>("wallet").session(session)
-
-        if(!agent || !agent.wallet){
-            throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
-        }
-
-           if(agent.wallet.isBlocked){
-            throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
-        }
+        const agent = await validateUserWithWallet(decodedToken.userId, session)
 
 
-        if(!agent.isApproved){
-            throw new AppError(httpStatus.FORBIDDEN, "your account is not approved")
-        }
-        
 
-       
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const userWallet = await validateWallet(userWalletId as mongoose.Types.ObjectId, session)
 
-        const userWallet = await Wallet.findById(userWalletId).session(session)
-      
 
-        if(!userWallet){
-            throw new AppError(httpStatus.NOT_FOUND, "receiver's wallet not found")
-        }
-        if(userWallet.isBlocked){
-            throw new AppError(httpStatus.BAD_REQUEST, "Receiver's wallet is currently blocked and cannot receive money.")
-        }
 
         const commissionRate = agent.commissionRate || 0
-        const commissionAmount = amount * commissionRate
+        const commissionAmount = (amount * commissionRate) / 100
         const amountToCreditFromAgent = amount - commissionAmount
 
-         if(amount > agent.wallet.balance){
+        if (amount > userWallet.balance) {
             throw new AppError(httpStatus.BAD_REQUEST, "insufficient balance")
         }
 
 
 
-        const updateUserWallet = await Wallet.findByIdAndUpdate(
+        const userPromise = Wallet.findByIdAndUpdate(
             userWalletId,
-            {$inc : {balance : -amount}},
-            {new:true, runValidators : true}
+            { $inc: { balance: -amount } },
+            { new: true, runValidators: true, session }
         )
 
 
-        const updateAgentWallet = await Wallet.findByIdAndUpdate(
+        const agentPromise = Wallet.findByIdAndUpdate(
             agent.wallet._id,
-            {$inc : {balance : amountToCreditFromAgent}},
-            {new:true, runValidators : true}
+            { $inc: { balance: amountToCreditFromAgent } },
+            { new: true, runValidators: true, session }
         )
 
-        if(!updateUserWallet || !updateAgentWallet){
+        const [updateUserWallet, updateAgentWallet] = await Promise.all([
+            userPromise,
+            agentPromise
+        ])
+
+        if (!updateUserWallet || !updateAgentWallet) {
             throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "failed to update wallet")
         }
 
@@ -444,35 +368,35 @@ const cashOut = async(payload : Partial<ITransaction>, decodedToken : JwtPayload
 
 
         const newTransaction = new Transaction({
-            types : IType.CASH_OUT,
-            amount : amount,
-            fee : commissionAmount,
-            commission : commissionAmount,
-            senderWallet : userWalletId,
-            receiverWallet : agent.wallet._id,
-            initiateBy : decodedToken.userId,
-            status : IStatus.COMPLETED,
+            types: IType.CASH_OUT,
+            amount: amount,
+            fee: commissionAmount,
+            commission: commissionAmount,
+            senderWallet: userWalletId,
+            receiverWallet: agent.wallet._id,
+            initiateBy: decodedToken.userId,
+            status: IStatus.COMPLETED,
             description: payload.description || `Cash-out of BDT ${amount} to user account. Commission: BDT ${commissionAmount}.`
         })
 
-        const savedTransaction = await newTransaction.save({session})
+        const savedTransaction = await newTransaction.save({ session })
 
         await session.commitTransaction()
         session.endSession()
 
         return savedTransaction
 
-     
-        
+
+
     } catch (error) {
         await session.abortTransaction()
         session.endSession()
-       throw error
-        
+        throw error
+
     }
 
 
-    
+
 }
 
 
@@ -480,43 +404,50 @@ const cashOut = async(payload : Partial<ITransaction>, decodedToken : JwtPayload
 
 
 
-const getAllTransactions = async () => {
+const getAllTransactions = async (query: Record<string, string>) => {
 
-    const transactions = await Transaction.find({});
+    const queryBuilder = new QueryBuilder(Transaction.find(), query)
 
-    const totalTransactions = await Transaction.countDocuments()
+    const transactionData = queryBuilder
+        .filter()
+        .search(transactionSearchableField)
+        .sort()
+        .fields()
+        .pagination()
 
+        const [data,meta] = await Promise.all([
+            transactionData.build(),
+            queryBuilder.getMeta()
+        ])
 
     return {
-        data: transactions,
-        meta: {
-            total: totalTransactions
-        }
+        data,
+        meta
     }
 }
 
 
-const getMyTransactions = async (userId : string) => {
+const getMyTransactions = async (userId: string) => {
 
     const user = await User.findById(userId).select("wallet")
 
-    if(!user){
+    if (!user) {
         throw new AppError(httpStatus.NOT_FOUND, "User or wallet not found.");
     }
 
     const walletId = user.wallet
 
     const transactions = await Transaction.find({
-        $or:[
-            
-                {initiateBy: userId},
-                {senderWallet: walletId},
-                {receiverWallet:walletId}
-            
+        $or: [
+
+            { initiateBy: userId },
+            { senderWallet: walletId },
+            { receiverWallet: walletId }
+
         ]
-    }).sort({createdAt : -1})
-    .populate("senderWallet", "owner balance")
-    .populate("receiverWallet", "owner balance")
+    }).sort({ createdAt: -1 })
+        .populate("senderWallet", "owner balance")
+        .populate("receiverWallet", "owner balance")
 
     return transactions
 }

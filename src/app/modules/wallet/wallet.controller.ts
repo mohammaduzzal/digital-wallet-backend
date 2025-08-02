@@ -6,8 +6,8 @@ import { sendResponse } from "../../utils/sendResponse";
 import httpStatus from 'http-status-codes';
 
 const getAllWallets = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-
-    const result = await WalletService.getAllWallets()
+    const query = req.query
+    const result = await WalletService.getAllWallets(query as Record<string,string>)
 
     sendResponse(res, {
         success: true,

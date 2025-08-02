@@ -71,8 +71,8 @@ const cashOut = catchAsync(async (req: Request, res: Response, next: NextFunctio
 
 
 const getAllTransactions = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-
-    const result = await TransactionService.getAllTransactions()
+    const query = req.query
+    const result = await TransactionService.getAllTransactions(query as Record<string,string>)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
