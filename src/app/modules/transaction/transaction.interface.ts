@@ -7,7 +7,6 @@ export enum IType{
     RECEIVE="RECEIVE",
     CASH_IN="CASH_IN",
     CASH_OUT="CASH_OUT",
-    COMMISSION="COMMISSION"
 }
 
 export enum IStatus{

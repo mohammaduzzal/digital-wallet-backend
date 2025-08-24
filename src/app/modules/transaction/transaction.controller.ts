@@ -86,8 +86,8 @@ const getAllTransactions = catchAsync(async (req: Request, res: Response, next: 
 
 const getMyTransactions = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const decodedToken = req.user as JwtPayload
-
-    const result = await TransactionService.getMyTransactions(decodedToken.userId)
+    const query = req.query
+    const result = await TransactionService.getMyTransactions(decodedToken.userId, query as Record<string,string>)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,

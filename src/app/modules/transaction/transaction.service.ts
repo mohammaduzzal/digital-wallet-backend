@@ -146,7 +146,11 @@ const sendMoney = async (payload: Partial<ITransaction>, decodedToken: JwtPayloa
 
 
 
-        const senderWalletId = user.wallet._id
+        const senderWalletId = user.wallet._id as mongoose.Types.ObjectId
+
+        if (receiverWalletId?.toString() === senderWalletId.toString()) {
+            throw new AppError(httpStatus.BAD_REQUEST, "You cannot send money to your own wallet.");
+        }
 
 
         if (amount > user.wallet.balance) {
@@ -327,7 +331,7 @@ const cashOut = async (payload: Partial<ITransaction>, decodedToken: JwtPayload)
 
 
 
-        
+
         const userWallet = await validateWallet(userWalletId as mongoose.Types.ObjectId, session)
 
 
@@ -415,10 +419,10 @@ const getAllTransactions = async (query: Record<string, string>) => {
         .fields()
         .pagination()
 
-        const [data,meta] = await Promise.all([
-            transactionData.build(),
-            queryBuilder.getMeta()
-        ])
+    const [data, meta] = await Promise.all([
+        transactionData.build(),
+        queryBuilder.getMeta()
+    ])
 
     return {
         data,
@@ -427,7 +431,7 @@ const getAllTransactions = async (query: Record<string, string>) => {
 }
 
 
-const getMyTransactions = async (userId: string) => {
+const getMyTransactions = async (userId: string, query: Record<string, string>) => {
 
     const user = await User.findById(userId).select("wallet")
 
@@ -437,7 +441,7 @@ const getMyTransactions = async (userId: string) => {
 
     const walletId = user.wallet
 
-    const transactions = await Transaction.find({
+    const baseQuery = Transaction.find({
         $or: [
 
             { initiateBy: userId },
@@ -449,7 +453,28 @@ const getMyTransactions = async (userId: string) => {
         .populate("senderWallet", "owner balance")
         .populate("receiverWallet", "owner balance")
 
-    return transactions
+
+    const queryBuilder = new QueryBuilder(baseQuery, query)
+
+    const transactionData = queryBuilder
+        .filter()
+        .sort()
+        .fields()
+        .pagination()
+
+    const [data, meta] = await Promise.all([
+        transactionData.build(),
+        queryBuilder.getMeta()
+    ])
+
+    return {
+        data,
+        meta
+    }
+
+
+
+
 }
 
 
