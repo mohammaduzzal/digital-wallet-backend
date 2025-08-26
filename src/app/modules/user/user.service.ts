@@ -93,7 +93,8 @@ const createUser = async (payload: Partial<IUser>) => {
 
 
 const getAllUser = async (query : Record<string,string>) => {
-    const queryBuilder = new QueryBuilder(User.find(),query)
+
+    const queryBuilder = new QueryBuilder(User.find().populate("wallet","isBlocked"),query)
     
     const userData = queryBuilder
     .filter()
@@ -147,14 +148,14 @@ const updateUser = async (userId: string, payload: Partial<IUser>, decodedToken:
 }
 
 const getMe = async (userId: string) => {
-   const user = await User.findById(userId).select("-password")
+   const user = await User.findById(userId).populate("wallet").select("-password")
    return {
       data: user
    }
 }
 
 const getSingleUser = async (id: string) => {
-   const user = await User.findById(id).select("-password")
+   const user = await User.findById(id).select("-password").populate("wallet","balance isBlocked")
    return {
       data: user
    }

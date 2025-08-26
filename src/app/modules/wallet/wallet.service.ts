@@ -5,7 +5,7 @@ import { QueryBuilder } from "../../utils/queryBuilders";
 
 
 const getAllWallets = async (query : Record<string,string>) => {
-    const queryBuilder = new QueryBuilder(Wallet.find().populate("owner", "name email"),query)
+    const queryBuilder = new QueryBuilder(Wallet.find().populate("owner","name email"),query)
 
 
     const walletData = queryBuilder
