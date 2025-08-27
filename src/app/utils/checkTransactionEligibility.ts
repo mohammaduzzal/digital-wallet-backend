@@ -15,6 +15,9 @@ export const validateUserWithWallet = async (userId: string, session: mongoose.C
         throw new AppError(httpStatus.NOT_FOUND, "user or wallet not found")
     }
 
+    if (!user.isApproved) {
+        throw new AppError(httpStatus.FORBIDDEN, "Your are  not approved and cannot perform any operations.")
+    }
     if (user.wallet.isBlocked) {
         throw new AppError(httpStatus.FORBIDDEN, "Your wallet is currently blocked and cannot perform any operations.")
     }

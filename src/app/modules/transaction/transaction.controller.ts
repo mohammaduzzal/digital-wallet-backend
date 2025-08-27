@@ -5,10 +5,12 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { TransactionService } from './transaction.service';
 import { JwtPayload } from 'jsonwebtoken';
+import { ISendMoneyPayload } from './transaction.interface.dto';
 
 const deposit = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const payload : ISendMoneyPayload = req.body
     const decodedToken = req.user
-    const result = await TransactionService.deposit(req.body, decodedToken as JwtPayload)
+    const result = await TransactionService.deposit(payload, decodedToken as JwtPayload)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
@@ -32,8 +34,9 @@ const withdraw = catchAsync(async (req: Request, res: Response, next: NextFuncti
 
 
 const sendMoney = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const payload : ISendMoneyPayload = req.body
     const decodedToken = req.user
-    const result = await TransactionService.sendMoney(req.body, decodedToken as JwtPayload)
+    const result = await TransactionService.sendMoney(payload, decodedToken as JwtPayload)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
@@ -45,8 +48,9 @@ const sendMoney = catchAsync(async (req: Request, res: Response, next: NextFunct
 
 
 const cashIn = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const payload :ISendMoneyPayload = req.body
     const decodedToken = req.user
-    const result = await TransactionService.cashIn(req.body, decodedToken as JwtPayload)
+    const result = await TransactionService.cashIn(payload, decodedToken as JwtPayload)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
@@ -57,8 +61,9 @@ const cashIn = catchAsync(async (req: Request, res: Response, next: NextFunction
 
 
 const cashOut = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const payload : ISendMoneyPayload = req.body
     const decodedToken = req.user
-    const result = await TransactionService.cashOut(req.body, decodedToken as JwtPayload)
+    const result = await TransactionService.cashOut(payload, decodedToken as JwtPayload)
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,

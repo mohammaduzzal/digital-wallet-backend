@@ -9,6 +9,8 @@ export const createTransactionZodSchema = z.object({
     status : z.enum(Object.values(IStatus)as [string,...string[]]).optional(),
     description:z.string().optional(),
     senderWallet : z.string().optional(),
-    receiverWallet:z.string().optional()
+    receiverWallet:z.string().optional(),
+    senderEmail : z.string().optional(),
+    receiverEmail : z.string().optional()
 
 })

@@ -8,6 +8,7 @@ export const createUserZodSchema = z.object({
     email: z.email({ error: "invalid email address format" })
         .min(5, { message: "email must be at least 5 characters long" })
         .max(100, { message: "email cannot exceed 100 characters" }),
+        role : z.enum(Object.values(Role) as [string,...string[]]),
 
     password: z.string().min(8)
         .regex(/^(?=.*[A-Z])/, {
@@ -22,9 +23,10 @@ export const createUserZodSchema = z.object({
 
     phoneNumber: z.
         string({ error: "phone number must be string" })
-        .regex(/^(?:\+8801\d{9})$/, {
-            message: "phone number must valid for bangladesh.format: +8801XXXXXXXXX or 01XXXXXXXXX"
-        }).optional()
+        .regex(/^(?:\+8801[3-9]\d{8}|01[3-9]\d{8})$/, {
+    message:
+      "Phone number must be valid Bangladesh format: +8801XXXXXXXXX or 01XXXXXXXXX",
+  }).optional()
 
 
 
