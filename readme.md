@@ -6,6 +6,7 @@ A robust RESTful API built with **Node.js**, **Express**, **TypeScript**, and **
 
 ## 🌐 Live Links
 
+- **Live Deployment:** [Digital Wallet API Frontend](https://assignment-6-digital-wallet-client.vercel.app/)
 - **Live Deployment:** [Digital Wallet API](https://digital-wallet-api-pink.vercel.app/)
 
 ---
